@@ -1,7 +1,5 @@
 import data.Chat
 import data.Message
-import exception.ChatNotFoundException
-import exception.MessageNotFoundException
 import java.text.SimpleDateFormat
 
 object ChatService {
@@ -52,26 +50,27 @@ object ChatService {
     }
 
     fun printChats() {
-        val chats = get().filter(fun(chat: Chat) = !chat.isDeleted)
         println("\nВсе чаты:")
-        for (chat in chats) {
-            val dataFormat = SimpleDateFormat("dd:MM:yy HH:mm")
-            println("=========================================================")
-            println("Чат ${chat.id} пользователя ${chat.userId1} и пользователя ${chat.userId2}\n ")
-            if (chat.messages.isNotEmpty()) {
-                println("Сообщения чата:")
-                for (message in chat.messages) {
-                    val dataOutput = dataFormat.format(message.date)
-                    if (message.isUnread && !message.isDeleted) {
-                        println("Сообщение  От пользователя ${message.userId}\n Дата: $dataOutput\n ${message.text}\n Сообщение непрочитано \n Id: ${message.id}\n")
+        get().filter(fun(chat: Chat) = !chat.isDeleted)
+            .forEach {
+                val dataFormat = SimpleDateFormat("dd:MM:yy HH:mm")
+                println("=========================================================")
+                println("Чат ${it.id} пользователя ${it.userId1} и пользователя ${it.userId2}\n ")
+                if (it.messages.isNotEmpty()) {
+                    println("Сообщения чата:")
+                    it.messages.forEach {
+                        val dataOutput = dataFormat.format(it.date)
+                        if (it.isUnread && !it.isDeleted) {
+                            println("Сообщение  От пользователя ${it.userId}\n Дата: $dataOutput\n ${it.text}\n Сообщение непрочитано \n Id: ${it.id}\n")
+                        }
+                        if (!it.isUnread && !it.isDeleted) {
+                            println("Сообщение  От пользователя ${it.userId}\n  Дата: $dataOutput\n ${it.text}\n Сообщение прочитано \n Id: ${it.id}\n")
+                        }
                     }
-                    if (!message.isUnread && !message.isDeleted) {
-                        println("Сообщение  От пользователя ${message.userId}\n  Дата: $dataOutput\n ${message.text}\n Сообщение прочитано \n Id: ${message.id}\n")
-                    }
-
                 }
             }
-        }
+
+
     }
 
     fun deleteMessage(userId: Int, chatId: Int, messageId: Int): Boolean {
@@ -92,24 +91,17 @@ object ChatService {
     }
 
     fun editMessage(userId: Int, chatId: Int, messageId: Int, text: String): Boolean {
-        val chat = findById(chatId)
-        if (chat != null) {
-            for (message: Message in chat.messages) {
-                if (message.id == messageId && message.isDeleted) {
-                    return throw MessageNotFoundException("Сообщение удалено, невозможно отредактировать")
-                }
-            }
-            if (chat.userId1 != userId && chat.userId2 != userId) {
-                return false
-            }
-            for (message: Message in chat.messages) {
-                if (messageId == message.id) {
-                    message.text = text
-                    return true
-                }
-            }
+        val chat = findById(chatId) ?: return false
+        if (chat.userId1 != userId && chat.userId2 != userId) {
+            return false
         }
-        return false
+        return try {
+            val message = chat.messages.first { it.id == messageId && !it.isDeleted }
+            message.text = text
+            true
+        } catch (e: NoSuchElementException) {
+            false
+        }
     }
 
     fun readMessages(userId: Int, chatId: Int, lastMessageId: Int, amount: Int): Boolean {
@@ -118,29 +110,25 @@ object ChatService {
             return false
         }
         if (chat != null) {
-
-            val output = chat.messages.filter(fun(message: Message) =
-                (message.id >= lastMessageId) && (message.id <= lastMessageId + amount))
-                .filter(fun(message: Message) = message.userId == userId).filter(fun(message: Message) =
-                    !message.isDeleted)
             val messagesIndices: MutableList<Int> = mutableListOf()
             val dataFormat = SimpleDateFormat("dd:MM:yy HH:mm")
             println("=========================================================")
             println("Cообщения из чата $chatId по вашему запросу:")
-            for (message: Message in output) {
-                if (!message.isDeleted) {
-                    val dataOutput = dataFormat.format(message.date)
-                    messagesIndices.add(message.id)
-                    println("Сообщение  От пользователя ${message.userId}\n  Дата: $dataOutput\n ${message.text}\n  Id: ${message.id}\n")
+            chat.messages.asSequence()
+                .filter(fun(message: Message) =
+                    (message.id >= lastMessageId) && (message.id <= lastMessageId + amount))
+                .filter(fun(message: Message) = message.userId == userId).filter(fun(message: Message) =
+                    !message.isDeleted).forEach {
+                    val dataOutput = dataFormat.format(it.date)
+                    messagesIndices.add(it.id)
+                    println("Сообщение  От пользователя ${it.userId}\n  Дата: $dataOutput\n ${it.text}\n  Id: ${it.id}\n")
                 }
+            chats[chats.indexOf(chat)].messages.forEach {
+                if (messagesIndices.contains(it.id))
+                    it.isUnread = false
             }
-            for (index in messagesIndices) {
-                for (message in chats[chats.indexOf(chat)].messages) {
-                    if (messagesIndices.contains(message.id))
-                        message.isUnread = false
-                }
 
-            }
+
             println("=========================================================")
             return true
         }
@@ -148,36 +136,40 @@ object ChatService {
     }
 
     fun getUnreadChatsCount(userId: Int): Int {
-        val chats = get()
         var count = 0
-        for (chat: Chat in chats) {
-            val unreadMessages = chat.messages.filter(fun(message: Message) = message.isUnread)
-                .filter(fun(message: Message) = message.receiverId == userId)
-            if (unreadMessages.isNotEmpty()) {
-                count++
+        get().asSequence()
+            .forEach {
+                val unreadMessages = it.messages.asSequence()
+                    .filter(fun(message: Message) = message.isUnread)
+                    .filter(fun(message: Message) = message.receiverId == userId)
+                    .toList()
+                if (unreadMessages.isNotEmpty()) {
+                    count++
+                }
             }
-        }
         return count
     }
 
     fun getChats(userId: Int) {
-        val chats = get().filter(fun(chat: Chat) = !chat.isDeleted)
         val unreadCount = getUnreadChatsCount(userId)
         if (unreadCount == 0) {
             println("Новых сообщений нет\n")
         }
         println("Список чатов для пользователя $userId с непрочитанными сообщениями:")
-        for (chat: Chat in chats) {
-            val unreadMessages = chat.messages.filter(fun(message: Message) = message.isUnread)
-                .filter(fun(message: Message) = message.receiverId == userId)
-            val unreadIndices = unreadMessages.indices.toList()
-            if (unreadMessages.isNotEmpty()) {
-                println("Чат ${chat.id} пользователя ${chat.userId1} и пользователя ${chat.userId2}\n ")
-                val dataFormat = SimpleDateFormat("dd:MM:yy HH:mm")
-                val dataOutput = dataFormat.format(unreadMessages.last().date)
-                println("Последнее сообщение чата:\nСообщение  От пользователя ${unreadMessages.last().userId}\n Дата: $dataOutput\n ${unreadMessages.last().text}\n Id: ${unreadMessages.last().id}\n")
+        get().asSequence()
+            .filter(fun(chat: Chat) = !chat.isDeleted)
+            .forEach {
+                val unreadMessages = it.messages.asSequence()
+                    .filter(fun(message: Message) = message.isUnread)
+                    .filter(fun(message: Message) = message.receiverId == userId)
+                    .toList()
+                if (unreadMessages.isNotEmpty()) {
+                    println("Чат ${it.id} пользователя ${it.userId1} и пользователя ${it.userId2}\n ")
+                    val dataFormat = SimpleDateFormat("dd:MM:yy HH:mm")
+                    val dataOutput = dataFormat.format(unreadMessages.last().date)
+                    println("Последнее сообщение чата:\nСообщение  От пользователя ${unreadMessages.last().userId}\n Дата: $dataOutput\n ${unreadMessages.last().text}\n Id: ${unreadMessages.last().id}\n")
+                }
             }
-        }
     }
 
     fun printUnreadChatsCount(userId: Int) {
@@ -185,17 +177,11 @@ object ChatService {
     }
 
     fun findById(chatId: Int): Chat? {
-        for (chat: Chat in chats) {
-            if (chat.id == chatId && chat.isDeleted) {
-                return throw ChatNotFoundException("Чат удален")
-            }
+        return try {
+            get().first { it.id == chatId && !it.isDeleted }
+        } catch (e: Exception) {
+            null
         }
-        for (chat: Chat in chats) {
-            if (chat.id == chatId) {
-                return chat
-            }
-        }
-        return null
     }
 
 }

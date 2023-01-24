@@ -27,14 +27,6 @@ internal class ChatServiceTest {
         assertTrue(result)
     }
 
-    @Test(expected = ChatNotFoundException::class)
-    fun deleteChatShouldThrow() {
-        ChatService.createChat(1, 2)
-        ChatService.deleteChat(1, 1)
-        ChatService.deleteChat(1, 1)
-
-    }
-
     @Test
     fun deleteChatFalseWrongUser() {
         val chat = ChatService.createChat(1, 2)
@@ -74,12 +66,6 @@ internal class ChatServiceTest {
         assertTrue(result)
     }
 
-    @Test(expected = ChatNotFoundException::class)
-    fun deleteMessageNoChatShouldThrow() {
-        ChatService.addMessage(1, 2, 1, "Привет")
-        ChatService.deleteMessage(1, 1, 1)
-        ChatService.deleteMessage(1, 1, 1)
-    }
     @Test
     fun deleteMessageNoMessage() {
         ChatService.addMessage(1, 2, 1, "Привет")
@@ -89,6 +75,7 @@ internal class ChatServiceTest {
         assertFalse(res)
 
     }
+
     @Test
     fun deleteMessageTrueDeleteChat() {
         ChatService.addMessage(1, 1, 2, "Привет")
@@ -96,78 +83,75 @@ internal class ChatServiceTest {
         assertTrue(result)
 
     }
+
     @Test
     fun deleteMessageFalseWrongUser() {
         ChatService.addMessage(1, 1, 2, "Привет")
         val result = ChatService.deleteMessage(3, 1, 1)
         assertFalse(result)
     }
+
     @Test
     fun deleteMessageFalseWrongMessageId() {
         ChatService.addMessage(1, 1, 2, "Привет")
         val result = ChatService.deleteMessage(1, 1, 2)
         assertFalse(result)
     }
+
     @Test
     fun printChats() {
         ChatService.createChat(1, 2)
         ChatService.addMessage(1, 1, 2, "Привет")
         val result = ChatService.printChats().toString()
-        assertNotEquals("",result)
+        assertNotEquals("", result)
 
     }
+
     @Test
     fun editMessageTrue() {
         ChatService.addMessage(1, 1, 1, "Привет")
-        val result = ChatService.editMessage(1,1,1,"Изменено")
+        val result = ChatService.editMessage(1, 1, 1, "Изменено")
         assertTrue(result)
     }
+
     @Test
     fun editMessageFalseWrongMessageId() {
         ChatService.addMessage(1, 1, 1, "Привет")
-        val result = ChatService.editMessage(1,1,2,"Изменено")
+        val result = ChatService.editMessage(1, 1, 2, "Изменено")
         assertFalse(result)
     }
+
     @Test
     fun editMessageFalseWrongUserId() {
         ChatService.addMessage(1, 1, 1, "Привет")
-        val result = ChatService.editMessage(2,1,1,"Изменено")
+        val result = ChatService.editMessage(2, 1, 1, "Изменено")
         assertFalse(result)
     }
-    @Test(expected = ChatNotFoundException::class)
-    fun editMessageShouldThrowChat() {
-        ChatService.addMessage(1, 1, 1, "Привет")
-        ChatService.deleteMessage(1,1,1)
-        ChatService.editMessage(2,1,1,"Изменено")
-    }
-    @Test(expected = MessageNotFoundException::class)
-    fun editMessageShouldThrowMessage() {
-        ChatService.addMessage(1, 1, 1, "Привет")
-        ChatService.addMessage(1, 1, 1, "Как дела?")
-        ChatService.deleteMessage(1,1,1)
-        ChatService.editMessage(2,1,1,"Изменено")
-    }
+
     @Test
     fun readMessagesTrue() {
         ChatService.createChat(1, 2)
         ChatService.addMessage(1, 1, 2, "Привет")
-        val result = ChatService.readMessages(1,1,1,1)
+        val result = ChatService.readMessages(1, 1, 1, 1)
         assertTrue(result)
     }
+
     @Test
     fun readMessagesFalseWrongUserId() {
         ChatService.createChat(1, 2)
         ChatService.addMessage(1, 1, 2, "Привет")
-        val result = ChatService.readMessages(3,1,1,1)
+        val result = ChatService.readMessages(3, 1, 1, 1)
         assertFalse(result)
     }
+
     @Test
     fun readMessagesFalseWrongChatId() {
         ChatService.createChat(1, 2)
         ChatService.addMessage(1, 1, 2, "Привет")
-        val result = ChatService.readMessages(1,3,1,1)
+        val result = ChatService.readMessages(1, 3, 1, 1)
         assertFalse(result)
     }
+
     @Test
     fun getUnreadChatsCount() {
         ChatService.addMessage(1, 2, 1, "Привет")
@@ -181,8 +165,9 @@ internal class ChatServiceTest {
         ChatService.addMessage(3, 5, 4, "Ещё один новый чат")
         ChatService.readMessages(2, 2, 1, 2)
         val result = ChatService.getUnreadChatsCount(1)
-        assertEquals(1,result)
+        assertEquals(1, result)
     }
+
     @Test
     fun getChats() {
         ChatService.addMessage(1, 2, 1, "Привет")
@@ -195,10 +180,8 @@ internal class ChatServiceTest {
         ChatService.addMessage(3, 4, 3, "Новый чат")
         ChatService.addMessage(3, 5, 4, "Ещё один новый чат")
         val result = ChatService.getChats(1).toString()
-        assertNotEquals("",result)
+        assertNotEquals("", result)
     }
-
-
 
 
 }

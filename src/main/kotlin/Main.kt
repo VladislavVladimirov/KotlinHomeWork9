@@ -29,10 +29,6 @@ fun main() {
 
 
 
-
-
-
-
     editMessage(2, 2, 1, "Как дела? Что нового?")
     readMessages(2, 2, 1, 2)
 
